@@ -1,0 +1,160 @@
+#!/bin/sh
+# vmmonitord    ocf_monitor service daemon
+###################################
+# LSB header
+### BEGIN INIT INFO
+# Provides: vmmonitord
+# Required-Start: network cloud-final
+# Required-Stop:
+# Default-Start: 3 4 5
+# Short-Description: daemon for starting vmmonitord service
+# Description: This is a daemon that a provides remote vmmonitord API
+#              and status tracking
+### END INIT INFO
+# description:  This is a daemon that provides a remote vmmonitord API
+#               and status tracking
+#
+# processname: vmmonitord
+#/opt/ericsson/vmmonitord/bin/ocf_monitor.py
+
+SERVICE=vmmonitord
+litp_HOME=/opt/ericsson/vmmonitord/
+PYTHON=/usr/bin/python
+PYTHONPATH=$litp_HOME/bin
+litp_SCRIPT=bin/ocf_monitor.py
+litp=$litp_HOME$litp_SCRIPT
+PROCESS=$litp #/opt/ericsson/vmmonitord/bin/ocf_monitor.py
+CONFIG_ARGS=" "
+LOCKFILE=/var/lock/subsys/$SERVICE
+PLUGINS_DIR=/var/lib/litp/plugins
+CONTRIB_DIR=/var/lib/litp/contrib
+PIDFILE=/var/run/vmmonitor.pid
+LITP=/usr/bin/litp
+SLES="SLES"
+RHEL="Red Hat Enterprise Linux Server"
+SUSE_STARTPROC=/sbin/startproc
+SUSE_CHECKPROC=/sbin/checkproc
+SUSE_KILLPROC=/sbin/killproc
+
+#Default to the RHEL way of doing things if os-release file cannot be found
+if [ -r /etc/os-release ]
+then
+    OS_VERSION="$(source /etc/os-release ; echo $NAME $VERSION)"
+else
+    OS_VERSION="$RHEL"
+fi
+
+case "$OS_VERSION" in
+     "$SLES"*)
+     . /etc/rc.status
+     rc_reset
+     ;;
+     "$RHEL"*)
+     . /etc/rc.d/init.d/functions
+     ;;
+esac
+[ -r /etc/sysconfig/vmmonitord ] && . /etc/sysconfig/vmmonitord
+[ -x $litp ] || exit 0
+
+RETVAL=0
+
+start() {
+     echo  -n $"Starting vmmonitord daemon: "
+     export PYTHONPATH=$PYTHONPATH
+     case "$OS_VERSION" in
+         "$SLES"*)
+         $SUSE_STARTPROC -p $PIDFILE  $PROCESS $CONFIG_ARGS --daemonize
+         rc_status -v
+         ;;
+         "$RHEL"*)
+         daemon --check $SERVICE nice -n -17 "$PROCESS $CONFIG_ARGS --daemonize"
+         ;;
+     esac
+     RETVAL=$?
+     [ $RETVAL -eq 0 ] && touch $LOCKFILE
+     echo ""
+     if [ $RETVAL -eq 0 ]; then
+       logger -t vmmonitord -p user.info "vmmonitord is started successfully, start RETVAL: $RETVAL"
+     else
+       logger -t vmmonitord -p user.info "vmmonitord did not start successfully, start RETVAL: $RETVAL"
+     fi
+     return $RETVAL
+}
+
+stop() {
+    echo  -n $"Stopping vmmonitord daemon: "
+    case "$OS_VERSION" in
+         "$SLES"*)
+         $SUSE_KILLPROC -p $PIDFILE -TERM $PROCESS
+         rc_status -v
+         ;;
+         "$RHEL"*)
+         killproc -p $PIDFILE $PROGRAM
+         ;;
+     esac
+     RETVAL=$?
+     echo
+     if [ $RETVAL -eq 0 ]; then
+       rm -f $LOCKFILE
+       rm -f /var/lock/subsys/$SERVICE.pid
+       logger -t vmmonitord -p user.info "vmmonitord is stopped successfully, stop RETVAL: $RETVAL"
+     else
+       logger -t vmmonitord -p user.info "vmmonitord did not stop successfully, stop RETVAL: $RETVAL"
+     fi
+     return $RETVAL
+}
+
+check_status() {
+    case "$OS_VERSION" in
+         "$SLES"*)
+         $SUSE_CHECKPROC -p $PIDFILE $PROCESS
+         rc_status -v
+         ;;
+         "$RHEL"*)
+         status -p $PIDFILE $PROCESS
+         ;;
+    esac
+    RETVAL=$?
+}
+
+restart() {
+   stop
+   start
+}
+
+# See how we were called.
+case "$1" in
+    start)
+        [ -f "$LOCKFILE" ] && echo "Service vmmonitord is already running." && exit 0
+        start
+        ;;
+    stop|restart)
+        $1
+        ;;
+    status)
+        check_status
+        ;;
+    condrestart)
+        [ -f $LOCKFILE ] && restart || :
+        ;;
+    reload)
+        echo "Can't reload configuration, you have to restart it."
+        RETVAL=$?
+        ;;
+    *)
+        echo $"Usage: $0 {start|stop|status|restart|condrestart|reload}"
+        exit 1
+        ;;
+esac
+
+case "$OS_VERSION" in
+     "$SLES"*)
+     rc_exit
+     ;;
+     "$RHEL"*)
+     exit $RETVAL
+     ;;
+esac
+
+
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=daemon for vmmonitord API and status tracking
+Before=shutdown.target
+After=local-fs.target cloud-final.service network-online.target
+Wants=network-online.target
+Conflicts=shutdown.target
+
+[Service]
+Type=forking
+PIDFile=/var/run/vmmonitor.pid
+ExecStart=/etc/rc.d/init.d/vmmonitord start
+ExecStop=/etc/rc.d/init.d/vmmonitord stop
+
+[Install]
+WantedBy=multi-user.target

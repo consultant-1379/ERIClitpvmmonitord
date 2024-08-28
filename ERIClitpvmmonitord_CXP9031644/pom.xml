@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>com.ericsson.nms.litp</groupId>
+    <artifactId>ERIClitpvmmonitord_CXP9031644</artifactId>
+    <packaging>rpm</packaging>
+    <name>[${project.parent.artifactId}] RPM module</name>
+    <description>LITP vmmonitord plugin</description>
+
+    <parent>
+        <groupId>com.ericsson.nms.litp</groupId>
+        <artifactId>ERIClitpvmmonitord</artifactId>
+        <version>1.3.5-SNAPSHOT</version>
+    </parent>
+
+    <properties>
+        <!-- publishes the rpm module to the ci portal -->
+        <publish_artifact>true</publish_artifact>
+        <media.category>common</media.category>
+        <com.ericsson.nms.litp.runats.skip>true</com.ericsson.nms.litp.runats.skip>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <!-- run nosetests -->
+                        <configuration>
+                            <executable>nosetests</executable>
+                            <environmentVariables>
+                                <PYTHONPATH>bin:src:target/deps/opt/ericsson/nms/litp/lib:${env.PYTHONPATH}</PYTHONPATH>
+                            </environmentVariables>
+                            <workingDirectory>..</workingDirectory>
+                            <arguments>
+                                <argument>--failure-detail</argument>
+                                <argument>--with-xunit</argument>
+                                <argument>--verbose</argument>
+                                <argument>--with-doctest</argument>
+                                <argument>--with-cov</argument>
+                                <argument>--cov-report=term-missing</argument>
+                                <argument>--cover-xml-file=nosetests_bin.xml</argument>
+                                <argument>--cov=src</argument>
+                                <argument>--cov=bin</argument>
+                                <argument>test</argument>
+                                <argument>src</argument>
+                            </arguments>
+                        </configuration>
+                        <id>nosetests</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>rpm-maven-plugin</artifactId>
+                <extensions>true</extensions>
+                <inherited>true</inherited>
+                <configuration>
+                    <autoRequires>false</autoRequires>
+                    <requires>
+                        <require>python3</require>
+                    </requires>
+                    <mappings combine.self="override">
+                        <mapping>
+                            <directory>/opt/ericsson/</directory>
+                            <filemode>775</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <directoryIncluded>true</directoryIncluded>
+                            <recurseDirectories>false</recurseDirectories>
+                        </mapping>
+
+                        <mapping>
+                            <directory>/etc/init.d</directory>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <configuration>true</configuration>
+                            <directoryIncluded>false</directoryIncluded>
+                            <recurseDirectories>false</recurseDirectories>
+                            <filemode>744</filemode>
+                            <sources>
+                                <source>
+                                    <location>../etc/init.d</location>
+                                    <includes>
+                                        <include>vmmonitord</include>
+                                    </includes>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <mapping>
+                            <directory>/usr/lib/systemd/system</directory>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <configuration>false</configuration>
+                            <directoryIncluded>false</directoryIncluded>
+                            <filemode>644</filemode>
+                            <recurseDirectories>false</recurseDirectories>
+                            <sources>
+                                <source>
+                                     <location>../etc/systemd</location>
+                                     <includes>
+                                            <include>vmmonitord.service</include>
+                                     </includes>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <mapping>
+                            <directory>/opt/ericsson/vmmonitord/bin</directory>
+                            <filemode>755</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <directoryIncluded>true</directoryIncluded>
+                            <recurseDirectories>false</recurseDirectories>
+                            <configuration>false</configuration>
+                            <sources>
+                                <source>
+                                    <location>../bin</location>
+                                    <excludes>
+                                        <!-- The "__init__.py" directly under ../src is bogus,
+                                             and should not be delivered in the RPM. -->
+                                        <exclude>__init__.py</exclude>
+                                        <exclude>**/*.pyc</exclude>
+                                        <exclude>**/*.pyo</exclude>
+                                        <exclude>**/*.gitignore</exclude>
+                                    </excludes>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                        <mapping>
+                            <directory>/etc/opt/ericsson/vmmonitord</directory>
+                            <configuration>true</configuration>
+                            <directoryIncluded>true</directoryIncluded>
+                            <filemode>644</filemode>
+                            <username>root</username>
+                            <groupname>root</groupname>
+                            <recurseDirectories>false</recurseDirectories>
+                            <sources>
+                                <source>
+                                    <location>../etc/opt</location>
+                                </source>
+                            </sources>
+                        </mapping>
+
+                     </mappings>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <dependencies>
+    </dependencies>
+</project>

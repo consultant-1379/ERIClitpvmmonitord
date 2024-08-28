@@ -1,0 +1,11 @@
+This module builds an RPM only.
+The rpm plugin is configured centrally for all LITP packages in the integration pom.
+
+After a release version (non SNAPSHOT) is built the CI Fwk Portal needs to be updated.
+This update is triggered when the following property is set to true in the pom.xml.
+<publish_artifact>true</publish_artifact>
+
+Set this property to false to temporarily disable deliveries.
+
+For more information please see the RPM Packaging confluence page at
+http://confluence-oss.lmera.ericsson.se/display/CIOSS/RPM+Packaging
